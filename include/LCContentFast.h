@@ -11,6 +11,7 @@
 #include "LCContentFast/CaloHitPreparationAlgorithmFast.h"
 #include "LCContentFast/ConeClusteringAlgorithmFast.h"
 #include "LCContentFast/MainFragmentRemovalAlgorithmFast.h"
+#include "LCContentFast/NeutralFragmentRemovalAlgorithmFast.h"
 #include "LCContentFast/SoftClusterMergingAlgorithmFast.h"
 #include "LCContentFast/TrackClusterAssociationAlgorithmFast.h"
 
@@ -24,6 +25,7 @@ public:
         d("CaloHitPreparationFast",                 lc_content_fast::CaloHitPreparationAlgorithm::Factory)                      \
         d("ConeClusteringFast",                     lc_content_fast::ConeClusteringAlgorithm::Factory)                          \
         d("MainFragmentRemovalFast",                lc_content_fast::MainFragmentRemovalAlgorithm::Factory)                     \
+        d("NeutralFragmentRemovalFast",             lc_content_fast::NeutralFragmentRemovalAlgorithm::Factory)                  \
         d("SoftClusterMergingFast",                 lc_content_fast::SoftClusterMergingAlgorithm::Factory)                      \
         d("TrackClusterAssociationFast",            lc_content_fast::TrackClusterAssociationAlgorithm::Factory)
 
