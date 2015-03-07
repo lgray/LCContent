@@ -443,4 +443,4 @@ StatusCode NeutralFragmentRemovalAlgorithm::ReadSettings(const TiXmlHandle xmlHa
     return STATUS_CODE_SUCCESS;
 }
 
-} // namespace lc_content
+} // namespace lc_content_fast

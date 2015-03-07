@@ -215,6 +215,6 @@ inline pandora::Algorithm *NeutralFragmentRemovalAlgorithm::Factory::CreateAlgor
     return new NeutralFragmentRemovalAlgorithm();
 }
 
-} // namespace lc_content
+} // namespace lc_content_fast
 
-#endif // #ifndef LC_NEUTRAL_FRAGMENT_REMOVAL_ALGORITHM_H
+#endif // #ifndef LC_NEUTRAL_FRAGMENT_REMOVAL_ALGORITHM_FAST_H
