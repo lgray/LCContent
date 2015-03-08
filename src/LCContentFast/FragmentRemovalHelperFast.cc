@@ -373,7 +373,7 @@ void ClusterContact::HitDistanceComparison(const Cluster *const pDaughterCluster
 	const unsigned int nParentCaloHits(pParentCluster->GetNCaloHits());
 	std::vector<std::pair<const CaloHit*, float> > parentRadii;
 	parentRadii.reserve(nParentCaloHits);
-	const unsigned int nClosestHits = 10; //todo: make configurable
+	const unsigned int nClosestHits = 6; //todo: make configurable
 	const unsigned int nActualClosestHits = std::min(nClosestHits,nParentCaloHits);
 	for (OrderedCaloHitList::const_iterator iterJ = orderedCaloHitListJ.begin(), iterJEnd = orderedCaloHitListJ.end(); iterJ != iterJEnd; ++iterJ)
 	{
@@ -388,13 +388,15 @@ void ClusterContact::HitDistanceComparison(const Cluster *const pDaughterCluster
     {
 		const CartesianVector centroidVector(pDaughterCluster->GetCentroid(iterI->first));
 
-		//sort parent hits by radial distance to centroid
-		for(unsigned int indexJ = 0; indexJ < parentRadii.size(); ++indexJ){
-			parentRadii.at(indexJ).second = (centroidVector - parentRadii.at(indexJ).first->GetPositionVector()).GetMagnitudeSquared();
+		if(nActualClosestHits < parentRadii.size()){ //partial_sort is only useful if it considers less than the total number of parent hits
+			//sort parent hits by radial distance to centroid
+			for(unsigned int indexJ = 0; indexJ < parentRadii.size(); ++indexJ){
+				parentRadii.at(indexJ).second = (centroidVector - parentRadii.at(indexJ).first->GetPositionVector()).GetMagnitudeSquared();
+			}
+			
+			//find m closest parent hits
+			std::partial_sort(parentRadii.begin(),parentRadii.begin()+nActualClosestHits,parentRadii.end(),lc_content::SortingHelper::SortHitsByRadiusToCentroid);
 		}
-		
-		//find m closest parent hits
-		std::partial_sort(parentRadii.begin(),parentRadii.begin()+nActualClosestHits,parentRadii.end(),lc_content::SortingHelper::SortHitsByRadiusToCentroid);
 		
         for (CaloHitList::const_iterator hitIterI = iterI->second->begin(), hitIterIEnd = iterI->second->end(); hitIterI != hitIterIEnd; ++hitIterI)
         {
