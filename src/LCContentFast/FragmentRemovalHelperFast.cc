@@ -133,7 +133,7 @@ float FragmentRemovalHelper::GetFractionOfHitsInCone(const Cluster *const pClust
         {
             const CartesianVector &hitPosition((*hitIter)->GetPositionVector());
             const CartesianVector positionDifference(hitPosition - coneApex);
-			const float magnitude(positionDifference->GetMagnitude());
+			const float magnitude(positionDifference.GetMagnitude());
 			
 			if (std::fabs(magnitude) < std::numeric_limits<float>::epsilon()){
 				if (hitPosition == coneApex)
