@@ -452,7 +452,7 @@ StatusCode ConeClusteringAlgorithm::FindHitsInSameLayer(unsigned int pseudoLayer
                         if( assc_cluster != m_hitsToClusters.end() )
                         {
                             auto nearby_iter = nearby_clusters.find(assc_cluster->second);
-							if(nearby_iter == nearby_clusters.end()){
+							if(nearby_iter == nearby_clusters.end() || nearby_iter->second == nullptr){
 								//assign the current hit as the nearest hit
 								nearby_clusters.emplace(assc_cluster->second,itr->second);
 							}
