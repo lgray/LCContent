@@ -9,6 +9,10 @@
 #include "Pandora/AlgorithmHeaders.h"
 
 #include "LCContentFast/FragmentRemovalHelperFast.h"
+#include "LCHelpers/SortingHelper.h"
+
+#include <utility>
+#include <algorithm>
 
 using namespace pandora;
 
@@ -129,17 +133,16 @@ float FragmentRemovalHelper::GetFractionOfHitsInCone(const Cluster *const pClust
         {
             const CartesianVector &hitPosition((*hitIter)->GetPositionVector());
             const CartesianVector positionDifference(hitPosition - coneApex);
-
-            try
-            {
-                const float cosTheta(coneDirection.GetDotProduct(positionDifference.GetUnitVector()));
+			const float magnitude(positionDifference.GetMagnitude());
+			
+			if (std::fabs(magnitude) < std::numeric_limits<float>::epsilon()){
+				if (hitPosition == coneApex)
+                    nHitsInCone++;
+			}
+			else {
+                const float cosTheta((coneDirection.GetDotProduct(positionDifference))/magnitude);
 
                 if (cosTheta > coneCosineHalfAngle)
-                    nHitsInCone++;
-            }
-            catch (StatusCodeException &)
-            {
-                if (hitPosition == coneApex)
                     nHitsInCone++;
             }
         }
@@ -365,31 +368,53 @@ void ClusterContact::HitDistanceComparison(const Cluster *const pDaughterCluster
     const OrderedCaloHitList &orderedCaloHitListI(pDaughterCluster->GetOrderedCaloHitList());
     const OrderedCaloHitList &orderedCaloHitListJ(pParentCluster->GetOrderedCaloHitList());
 
+	//fill vector of parent hits
+	const unsigned int nParentCaloHits(pParentCluster->GetNCaloHits());
+	std::vector<std::pair<const CaloHit*, float> > parentRadii;
+	parentRadii.reserve(nParentCaloHits);
+	const unsigned int nClosestHits = 6; //todo: make configurable
+	const unsigned int nActualClosestHits = std::min(nClosestHits,nParentCaloHits);
+	for (OrderedCaloHitList::const_iterator iterJ = orderedCaloHitListJ.begin(), iterJEnd = orderedCaloHitListJ.end(); iterJ != iterJEnd; ++iterJ)
+	{
+		for (CaloHitList::const_iterator hitIterJ = iterJ->second->begin(), hitIterJEnd = iterJ->second->end(); hitIterJ != hitIterJEnd; ++hitIterJ)
+		{
+			parentRadii.emplace_back(*hitIterJ, 0.f);
+		}
+	}
+	
     // Loop over hits in daughter cluster
     for (OrderedCaloHitList::const_iterator iterI = orderedCaloHitListI.begin(), iterIEnd = orderedCaloHitListI.end(); iterI != iterIEnd; ++iterI)
     {
+		const CartesianVector centroidVector(pDaughterCluster->GetCentroid(iterI->first));
+
+		if(nActualClosestHits < parentRadii.size()){ //partial_sort is only useful if it considers less than the total number of parent hits
+			//sort parent hits by radial distance to centroid
+			for(unsigned int indexJ = 0; indexJ < parentRadii.size(); ++indexJ){
+				parentRadii.at(indexJ).second = (centroidVector - parentRadii.at(indexJ).first->GetPositionVector()).GetMagnitudeSquared();
+			}
+			
+			//find m closest parent hits
+			std::partial_sort(parentRadii.begin(),parentRadii.begin()+nActualClosestHits,parentRadii.end(),lc_content::SortingHelper::SortHitsByRadiusToCentroid);
+		}
+		
         for (CaloHitList::const_iterator hitIterI = iterI->second->begin(), hitIterIEnd = iterI->second->end(); hitIterI != hitIterIEnd; ++hitIterI)
         {
             bool isCloseHit1(false), isCloseHit2(false);
             const CartesianVector &positionVectorI((*hitIterI)->GetPositionVector());
 
-            // Compare each hit in daughter cluster with those in parent cluster
-            for (OrderedCaloHitList::const_iterator iterJ = orderedCaloHitListJ.begin(), iterJEnd = orderedCaloHitListJ.end(); iterJ != iterJEnd; ++iterJ)
-            {
-                for (CaloHitList::const_iterator hitIterJ = iterJ->second->begin(), hitIterJEnd = iterJ->second->end(); hitIterJ != hitIterJEnd; ++hitIterJ)
-                {
-                    const float distanceSquared((positionVectorI - (*hitIterJ)->GetPositionVector()).GetMagnitudeSquared());
+			//compare only closest parent hits to daughter hits
+			for(unsigned int indexJ = 0; indexJ < nActualClosestHits; ++indexJ){
+				const float distanceSquared((positionVectorI - (parentRadii.at(indexJ).first)->GetPositionVector()).GetMagnitudeSquared());
 
-                    if (!isCloseHit1 && (distanceSquared < closeHitDistance1Squared))
-                        isCloseHit1 = true;
+				if (!isCloseHit1 && (distanceSquared < closeHitDistance1Squared))
+					isCloseHit1 = true;
 
-                    if (!isCloseHit2 && (distanceSquared < closeHitDistance2Squared))
-                        isCloseHit2 = true;
+				if (!isCloseHit2 && (distanceSquared < closeHitDistance2Squared))
+					isCloseHit2 = true;
 
-                    if (distanceSquared < minDistanceSquared)
-                        minDistanceSquared = distanceSquared;
-                }
-            }
+				if (distanceSquared < minDistanceSquared)
+					minDistanceSquared = distanceSquared;
+			}
 
             if (isCloseHit1)
                 nCloseHits1++;

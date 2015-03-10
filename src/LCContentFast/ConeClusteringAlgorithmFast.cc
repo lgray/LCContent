@@ -316,7 +316,7 @@ StatusCode ConeClusteringAlgorithm::FindHitsInPreviousLayers(unsigned int pseudo
                 const float clusterEnergy(pCluster->GetHadronicEnergy());
 
                 PANDORA_RETURN_RESULT_IF_AND_IF(STATUS_CODE_SUCCESS, STATUS_CODE_UNCHANGED, !=, this->GetGenericDistanceToHit(pCluster,
-                    pCaloHit, searchLayer, clusterFitResultMap, genericDistance));
+                    pCaloHit, searchLayer, clusterFitResultMap, genericDistance, nullptr, false));
 
                 if ((genericDistance < smallestGenericDistance) ||
                     ((genericDistance == smallestGenericDistance) && (clusterEnergy > bestClusterEnergy)))
@@ -377,7 +377,7 @@ StatusCode ConeClusteringAlgorithm::FindHitsInSameLayer(unsigned int pseudoLayer
     //pull out result caches to help keep memory locality
     std::vector<TrackKDNode> found_tracks;
     std::vector<HitKDNode> found_hits;
-    ClusterList nearby_clusters;
+    ClusterListWithNearestHit nearby_clusters;
 
     while (!available_hits_in_layer.empty())
     {
@@ -413,7 +413,11 @@ StatusCode ConeClusteringAlgorithm::FindHitsInSameLayer(unsigned int pseudoLayer
                         auto assc_cluster = m_tracksToClusters.find(itr->second);
                         if(assc_cluster != m_tracksToClusters.end())
                         {
-                            nearby_clusters.insert(assc_cluster->second);
+                            auto nearby_iter = nearby_clusters.find(assc_cluster->second);
+							if(nearby_iter == nearby_clusters.end()){
+								//no nearest hit from track search
+								nearby_clusters.emplace(assc_cluster->second,nullptr);
+							}
                         }
                     }
                 }
@@ -427,11 +431,16 @@ StatusCode ConeClusteringAlgorithm::FindHitsInSameLayer(unsigned int pseudoLayer
                         auto assc_cluster = m_tracksToClusters.find(track.data);
                         if (assc_cluster != m_tracksToClusters.end())
                         {
-                            nearby_clusters.insert(assc_cluster->second);
+                            auto nearby_iter = nearby_clusters.find(assc_cluster->second);
+							if(nearby_iter == nearby_clusters.end()){
+								//no nearest hit from track search
+								nearby_clusters.emplace(assc_cluster->second,nullptr);
+							}
                         }
                     }
                     found_tracks.clear();
                 }
+				
                 // now search for hits-in-clusters that would also satisfy the criteria
                 auto hits_assc_cache = hitsToHitsLocal.find(pCaloHit);
                 if (hits_assc_cache != hitsToHitsLocal.end())
@@ -442,7 +451,25 @@ StatusCode ConeClusteringAlgorithm::FindHitsInSameLayer(unsigned int pseudoLayer
                         auto assc_cluster = m_hitsToClusters.find(itr->second);
                         if( assc_cluster != m_hitsToClusters.end() )
                         {
-                            nearby_clusters.insert(assc_cluster->second);
+                            auto nearby_iter = nearby_clusters.find(assc_cluster->second);
+							if(nearby_iter == nearby_clusters.end()){
+								//assign the current hit as the nearest hit
+								nearby_clusters.emplace(assc_cluster->second,itr->second);
+							}
+							else if(nearby_iter->second == nullptr){
+								//overwrite null hit with current hit
+								nearby_iter->second = itr->second;
+							}
+							else {
+								//check if the current hit is nearer
+								//should the min distance be cached with the nearest hit?
+								const CartesianVector &hitPosition(pCaloHit->GetPositionVector());
+								const CartesianVector &nearPosition(nearby_iter->second->GetPositionVector());
+								const CartesianVector &testPosition(itr->second->GetPositionVector());
+								if((hitPosition-testPosition).GetMagnitudeSquared() < (hitPosition-nearPosition).GetMagnitudeSquared()){
+									nearby_iter->second = itr->second;
+								}
+							}
                         }
                     }
                 }
@@ -456,23 +483,41 @@ StatusCode ConeClusteringAlgorithm::FindHitsInSameLayer(unsigned int pseudoLayer
                         auto assc_cluster = m_hitsToClusters.find(hit.data);
                         if (assc_cluster != m_hitsToClusters.end())
                         {
-                            nearby_clusters.insert(assc_cluster->second);
+                            auto nearby_iter = nearby_clusters.find(assc_cluster->second);
+							if(nearby_iter == nearby_clusters.end()){
+								//assign the current hit as the nearest hit
+								nearby_clusters.emplace(assc_cluster->second,hit.data);
+							}
+							else if(nearby_iter->second == nullptr){
+								//overwrite null hit with current hit
+								nearby_iter->second = hit.data;
+							}
+							else {
+								//check if the current hit is nearer
+								//should the min distance be cached with the nearest hit?
+								const CartesianVector &hitPosition(pCaloHit->GetPositionVector());
+								const CartesianVector &nearPosition(nearby_iter->second->GetPositionVector());
+								const CartesianVector &testPosition(hit.data->GetPositionVector());
+								if((hitPosition-testPosition).GetMagnitudeSquared() < (hitPosition-nearPosition).GetMagnitudeSquared()){
+									nearby_iter->second = hit.data;
+								}
+							}
                         }
                     }
                     found_hits.clear();
                 }
 
                 // See if hit should be associated with any existing clusters
-                for (ClusterList::iterator clusterIter = nearby_clusters.begin(), clusterIterEnd = nearby_clusters.end();
+                for (auto clusterIter = nearby_clusters.begin(), clusterIterEnd = nearby_clusters.end();
                     clusterIter != clusterIterEnd; ++clusterIter)
                 {
-                    const Cluster *const pCluster = *clusterIter;
+                    const Cluster *const pCluster = clusterIter->first;
                     float genericDistance(std::numeric_limits<float>::max());
                     const float clusterEnergy(pCluster->GetHadronicEnergy());
-
+					
                     PANDORA_RETURN_RESULT_IF_AND_IF(STATUS_CODE_SUCCESS, STATUS_CODE_UNCHANGED, !=, this->GetGenericDistanceToHit(pCluster,
-                        pCaloHit, pseudoLayer, clusterFitResultMap, genericDistance));
-
+                        pCaloHit, pseudoLayer, clusterFitResultMap, genericDistance, clusterIter->second,true));
+						
                     if ((genericDistance < smallestGenericDistance) || ((genericDistance == smallestGenericDistance) && (clusterEnergy > bestClusterEnergy)))
                     {
                         pBestCluster = pCluster;
@@ -519,9 +564,9 @@ StatusCode ConeClusteringAlgorithm::FindHitsInSameLayer(unsigned int pseudoLayer
 //------------------------------------------------------------------------------------------------------------------------------------------
 
 StatusCode ConeClusteringAlgorithm::GetGenericDistanceToHit(const Cluster *const pCluster, const CaloHit *const pCaloHit, const unsigned int searchLayer,
-    const ClusterFitResultMap &clusterFitResultMap, float &genericDistance) const
+    const ClusterFitResultMap &clusterFitResultMap, float &genericDistance, const CaloHit *const nearestHit, bool checkedNN) const
 {
-    const unsigned int firstLayer = m_firstLayer;
+	const unsigned int firstLayer = m_firstLayer;
 
     // Use position of track projection at calorimeter. Proceed only if projection is reasonably compatible with calo hit
     if (((searchLayer == 0) || (searchLayer < firstLayer)) && pCluster->IsTrackSeeded())
@@ -563,7 +608,7 @@ StatusCode ConeClusteringAlgorithm::GetGenericDistanceToHit(const Cluster *const
 
         if (searchLayer == pCaloHit->GetPseudoLayer())
         {
-            return this->GetDistanceToHitInSameLayer(pCaloHit, pClusterCaloHitList, genericDistance);
+            return this->GetDistanceToHitInSameLayer(pCaloHit, pClusterCaloHitList, genericDistance, nearestHit, checkedNN);
         }
 
         // Measurement using initial cluster direction
@@ -637,7 +682,7 @@ StatusCode ConeClusteringAlgorithm::GetGenericDistanceToHit(const Cluster *const
 //------------------------------------------------------------------------------------------------------------------------------------------
 
 StatusCode ConeClusteringAlgorithm::GetDistanceToHitInSameLayer(const CaloHit *const pCaloHit, const CaloHitList *const pCaloHitList,
-    float &distance) const
+    float &distance, const CaloHit *const nearestHit, bool checkedNN) const
 {
     const float dCut ((PandoraContentApi::GetGeometry(*this)->GetHitTypeGranularity(pCaloHit->GetHitType()) <= FINE) ?
         (m_sameLayerPadWidthsFine * pCaloHit->GetCellLengthScale()) :
@@ -651,11 +696,9 @@ StatusCode ConeClusteringAlgorithm::GetDistanceToHitInSameLayer(const CaloHit *c
     bool hitFound(false);
     float smallestDistanceSquared(std::numeric_limits<float>::max());
     const float rDCutSquared(1.f / (dCut * dCut));
-
-    for (CaloHitList::const_iterator iter = pCaloHitList->begin(), iterEnd = pCaloHitList->end(); iter != iterEnd; ++iter)
-    {
-        const CaloHit *const pHitInCluster = *iter;
-        const CartesianVector &hitInClusterPosition(pHitInCluster->GetPositionVector());
+	
+	if(checkedNN && nearestHit != nullptr){ //no need to loop if the nearest hit is already known
+        const CartesianVector &hitInClusterPosition(nearestHit->GetPositionVector());
         const float separationSquared((hitPosition - hitInClusterPosition).GetMagnitudeSquared());
         const float hitDistanceSquared(separationSquared * rDCutSquared);
 
@@ -663,8 +706,24 @@ StatusCode ConeClusteringAlgorithm::GetDistanceToHitInSameLayer(const CaloHit *c
         {
             smallestDistanceSquared = hitDistanceSquared;
             hitFound = true;
+        }		
+	}
+	else if(!checkedNN) { //loop if NN wasn't previously checked
+        for (CaloHitList::const_iterator iter = pCaloHitList->begin(), iterEnd = pCaloHitList->end(); iter != iterEnd; ++iter)
+        {
+            const CaloHit *const pHitInCluster = *iter;
+            const CartesianVector &hitInClusterPosition(pHitInCluster->GetPositionVector());
+            const float separationSquared((hitPosition - hitInClusterPosition).GetMagnitudeSquared());
+            const float hitDistanceSquared(separationSquared * rDCutSquared);
+        
+            if (hitDistanceSquared < smallestDistanceSquared)
+            {
+                smallestDistanceSquared = hitDistanceSquared;
+                hitFound = true;
+            }
         }
-    }
+	}
+	//in case that NN was checked and nearestHit is null, the loop will never be worthwhile, just skip it
 
     if (!hitFound)
         return STATUS_CODE_UNCHANGED;
