@@ -129,7 +129,7 @@ private:
      *  @param  genericDistance to receive the generic distance
      */
     pandora::StatusCode GetGenericDistanceToHit(const pandora::Cluster *const pCluster, const pandora::CaloHit *const pCaloHit,
-        const unsigned int searchLayer, const ClusterFitResultMap &clusterFitResultMap, float &genericDistance, const pandora::CaloHit *const nearestHit) const;
+        const unsigned int searchLayer, const ClusterFitResultMap &clusterFitResultMap, float &genericDistance, const pandora::CaloHit *const nearestHit, bool checkedNN) const;
 
     /**
      *  @brief  Get the generic distance between a calo hit and a cluster in the same pseudo layer
@@ -139,7 +139,7 @@ private:
      *  @param  distance to receive the distance
      */
     pandora::StatusCode GetDistanceToHitInSameLayer(const pandora::CaloHit *const pCaloHit, const pandora::CaloHitList *const pCaloHitList,
-        float &distance, const pandora::CaloHit *const nearestHit) const;
+        float &distance, const pandora::CaloHit *const nearestHit, bool checkedNN) const;
 
     /**
      *  @brief  Get the smallest cone approach distance between a calo hit and all the hits in a cluster, using a specified
