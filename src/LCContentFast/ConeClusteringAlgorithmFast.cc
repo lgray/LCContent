@@ -113,8 +113,10 @@ StatusCode ConeClusteringAlgorithm::Run()
     //reset our kd trees and maps if everything turned out well
     m_tracksKdTree.clear();
     m_hitsKdTree.clear();
-    m_hitsToClusters.clear();
-    m_tracksToClusters.clear();
+	m_hitsToClusters.clear();
+	std::unordered_map<const pandora::CaloHit*, const pandora::Cluster*>().swap(m_hitsToClusters);
+	m_tracksToClusters.clear();
+	std::unordered_map<const pandora::Track*, const pandora::Cluster*>().swap(m_tracksToClusters);
 
     return STATUS_CODE_SUCCESS;
 }
