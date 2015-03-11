@@ -102,7 +102,7 @@ private:
      *  @return the index of the best parent cluster
      */
     int FindBestParentCluster(const pandora::ClusterVector &clusterVector, const HitToClusterMap &hitToClusterMap, QuickUnion &quickUnion,
-        const pandora::Cluster *const pDaughterCluster, const pandora::CaloHitList &daughterHits, float &closestDistance) const;
+        const pandora::Cluster *const pDaughterCluster, const pandora::CaloHitList &daughterHits, float &closestDistance);
 
     /**
      *  @brief  Whether a soft daughter candidate cluster can be merged with a parent a specified distance away
@@ -162,9 +162,9 @@ private:
     float                   m_maxClusterDistanceFine;               ///< Fine granularity max distance between parent and daughter clusters
     float                   m_maxClusterDistanceCoarse;             ///< Coarse granularity max distance between parent and daughter clusters
 
-    HitsToHitsCacheMap         *m_hitsToHitsCacheMap;               ///< To cache nearby hits retrieved from kd-tree
-    std::vector<HitKDNode3D>   *m_hitNodes3D;                       ///< nodes for the KD tree (used for filling)
-    HitKDTree3D                *m_hitsKdTree3D;                     ///< the kd-tree itself, 3D in x,y,z
+    HitsToHitsCacheMap         m_hitsToHitsCacheMap;               ///< To cache nearby hits retrieved from kd-tree
+    std::vector<HitKDNode3D>   m_hitNodes3D;                       ///< nodes for the KD tree (used for filling)
+    HitKDTree3D                m_hitsKdTree3D;                     ///< the kd-tree itself, 3D in x,y,z
 };
 
 //------------------------------------------------------------------------------------------------------------------------------------------
