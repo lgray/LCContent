@@ -134,6 +134,7 @@ StatusCode ConeClusteringAlgorithm::InitializeKDTrees(const TrackList *const pTr
         KDTreeCube tracksBoundingRegion = fill_and_bound_3d_kd_tree(this, *pTrackList, m_trackNodes);
         m_tracksKdTree.build(m_trackNodes,tracksBoundingRegion);
         m_trackNodes.clear();
+		std::vector<TrackKDNode>().swap(m_trackNodes);
     }
 
     // make sure the hit kd tree is ready
@@ -142,6 +143,7 @@ StatusCode ConeClusteringAlgorithm::InitializeKDTrees(const TrackList *const pTr
     KDTreeTesseract hitsBoundingRegion = fill_and_bound_4d_kd_tree(this,*pCaloHitList,m_hitNodes);
     m_hitsKdTree.build(m_hitNodes,hitsBoundingRegion);
     m_hitNodes.clear();
+	std::vector<HitKDNode>().swap(m_hitNodes);
 
     return STATUS_CODE_SUCCESS;
 }

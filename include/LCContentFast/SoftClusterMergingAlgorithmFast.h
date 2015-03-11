@@ -9,14 +9,13 @@
 #define LC_SOFT_CLUSTER_MERGING_ALGORITHM_FAST_H 1
 
 #include "Pandora/Algorithm.h"
+#include "LCContentFast/KDTreeLinkerAlgoT.h"
 
 #include <unordered_map>
 
 namespace lc_content_fast
 {
 
-template<typename, unsigned int> class KDTreeLinkerAlgo;
-template<typename, unsigned int> class KDTreeNodeInfoT;
 class QuickUnion;
 
 //------------------------------------------------------------------------------------------------------------------------------------------

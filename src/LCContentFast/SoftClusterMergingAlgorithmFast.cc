@@ -156,6 +156,7 @@ void SoftClusterMergingAlgorithm::InitializeKDTree(const CaloHitList *const pCal
     KDTreeCube hitsBoundingRegion3D = fill_and_bound_3d_kd_tree(this, *pCaloHitList, m_hitNodes3D, true);
     m_hitsKdTree3D.build(m_hitNodes3D, hitsBoundingRegion3D);
     m_hitNodes3D.clear();
+	std::vector<HitKDNode3D>().swap(m_hitNodes3D);
 }
 
 //------------------------------------------------------------------------------------------------------------------------------------------
