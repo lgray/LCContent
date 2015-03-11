@@ -68,6 +68,8 @@ StatusCode CaloHitPreparationAlgorithm::Run()
         return statusCodeException.GetStatusCode();
     }
 
+	m_hitsKdTree4D->clear();
+	
     return STATUS_CODE_SUCCESS;
 }
 
